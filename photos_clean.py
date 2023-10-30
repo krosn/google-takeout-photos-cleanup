@@ -156,7 +156,7 @@ def ensure_date_set(dir_name: str, files: list[str]) -> None:
             with open(json_file) as open_json_file:
                 json_data = json.load(open_json_file)
             
-            creation_unix_timestamp = int(json_data['creationTime']['timestamp'])
+            creation_unix_timestamp = int(json_data['photoTakenTime']['timestamp'])
             date_time = datetime.datetime.utcfromtimestamp(creation_unix_timestamp)
             
             if file_name.endswith('.gif'):
