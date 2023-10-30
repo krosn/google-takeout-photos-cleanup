@@ -1,6 +1,9 @@
 import os
 import re
 from collections import defaultdict
+from PIL import Image, ExifTags
+from pathlib import Path
+from dateutil import parser
 
 def clean_folder(path: str):
     # TODO: Loop folders
@@ -26,8 +29,6 @@ def clean_folder(path: str):
         print([f'{f}' for f in files_to_remove])
 
         # TODO: Remove files to remove
-
-        # TODO: Default year for missing dates via prompt
 
 def remove_json_files(files:list[str]) -> tuple[list[str], list[str]]:
     """Remove JSON files from the list.
@@ -105,8 +106,41 @@ def remove_unwanted_hyphenated_files(files:list[str]) -> tuple[list[str], list[s
 
     return (files_to_keep, files_removed)
 
-def ensure_date_set(dir_name: str, files_to_keep: list[str]) -> None:
-    pass
+def ensure_date_set(dir_name: str, files: list[str]) -> None:
+    image_extensions = ('.jpg', '.jpeg', '.gif', '.bmp', '.tiff', '.raw')
+    image_files = (file_name for file_name in files if file_name.endswith(image_extensions))
+
+    for file_name in image_files:
+        # Open image and read EXIF
+        image_path = os.path.join(dir_name, file_name)
+        
+        image = Image.open(image_path)
+        image_exif = image.getexif()
+
+        date_tags = [ExifTags.Base.DateTime, ExifTags.Base.DateTimeOriginal, ExifTags.Base.DateTimeDigitized]
+        
+        # Only update EXIF if no date tag is set
+        if not any(tag for tag in date_tags if tag in image_exif):
+            # Strip any suffixes from name
+            file_name_as_date = Path(file_name)
+            while file_name_as_date.suffix:
+                file_name_as_date = file_name_as_date.with_suffix('')
+            file_name_as_date = str(file_name_as_date)
+
+            # Try to remove everything other than numbers and separators between numbers
+            file_name_as_date = re.sub(r'[^0-9\:\-]|-\D', '', file_name_as_date)
+
+            # Attempt to interpret name as a date and time
+            try:
+                date_time = parser.parse(file_name_as_date)
+            except ValueError:
+                print(f'Unable to determine datetime for f{file_name}.')
+                print(f'Please specify a value in "YYYY-MM-DD hh:mm:ss" format:')
+                date_time = parser.parse(input())
+            
+            # Update the date time field in the EXIF and save
+            image_exif[int(ExifTags.Base.DateTime)] = date_time.strftime("%Y:%m:%d %H:%M:%S")
+            image.save(image_path, exif=image_exif)
 
 
 if __name__ == "__main__":
