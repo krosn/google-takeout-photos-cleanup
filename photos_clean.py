@@ -2,8 +2,10 @@ import os
 import re
 from collections import defaultdict
 from PIL import Image, ExifTags
-from pathlib import Path
 from dateutil import parser
+import json
+import datetime
+import subprocess
 
 def clean_folder(path: str):
     # TODO: Loop folders
@@ -111,7 +113,6 @@ def ensure_date_set(dir_name: str, files: list[str]) -> None:
     image_files = (file_name for file_name in files if file_name.endswith(image_extensions))
 
     for file_name in image_files:
-        # Open image and read EXIF
         image_path = os.path.join(dir_name, file_name)
         
         image = Image.open(image_path)
@@ -121,26 +122,29 @@ def ensure_date_set(dir_name: str, files: list[str]) -> None:
         
         # Only update EXIF if no date tag is set
         if not any(tag for tag in date_tags if tag in image_exif):
-            # Strip any suffixes from name
-            file_name_as_date = Path(file_name)
-            while file_name_as_date.suffix:
-                file_name_as_date = file_name_as_date.with_suffix('')
-            file_name_as_date = str(file_name_as_date)
+            print(f'File {file_name} does not have EXIF data.')
 
-            # Try to remove everything other than numbers and separators between numbers
-            file_name_as_date = re.sub(r'[^0-9\:\-]|-\D', '', file_name_as_date)
+            json_file = os.path.join(dir_name, file_name) + '.json'
+            json_file_exists = os.path.exists(json_file)
 
-            # Attempt to interpret name as a date and time
-            try:
-                date_time = parser.parse(file_name_as_date)
-            except ValueError:
-                print(f'Unable to determine datetime for f{file_name}.')
+            if not json_file_exists:
+                print(f'Unable to find JSON file or key for f{file_name}.')
                 print(f'Please specify a value in "YYYY-MM-DD hh:mm:ss" format:')
                 date_time = parser.parse(input())
+
+            with open(json_file) as open_json_file:
+                json_data = json.load(open_json_file)
             
-            # Update the date time field in the EXIF and save
-            image_exif[int(ExifTags.Base.DateTime)] = date_time.strftime("%Y:%m:%d %H:%M:%S")
-            image.save(image_path, exif=image_exif)
+            creation_unix_timestamp = int(json_data['creationTime']['timestamp'])
+            date_time = datetime.datetime.utcfromtimestamp(creation_unix_timestamp)
+            
+            if file_name.endswith('.gif'):
+                # Can't seem to set EXIF on gifs, so set creation time of file
+                subprocess.call(['SetFile', '-d', date_time.strftime("%m/%d/%Y %H:%M:%S"), image_path])
+            else:
+                # Update the date time field in the EXIF and save
+                image_exif[int(ExifTags.Base.DateTime)] = date_time.strftime("%Y:%m:%d %H:%M:%S")
+                image.save(image_path, exif=image_exif)
 
 
 if __name__ == "__main__":
