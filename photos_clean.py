@@ -9,6 +9,7 @@ import subprocess
 import pathlib
 
 OUTPUT_FOLDER = '/Users/kevin/photos_migration'
+DEBUG_MESSAGES = False
 
 def clean_folder(path: str):
     # TODO: Loop folders
@@ -27,11 +28,12 @@ def clean_folder(path: str):
 
         ensure_date_set(dir_name, files_to_keep)
 
-        print("Keeping the following files:")
-        print([f'{f}' for f in files_to_keep])
+        if DEBUG_MESSAGES:
+            print("Keeping the following files:")
+            print([f'{f}' for f in files_to_keep])
 
-        print("Not copying the following files:")
-        print([f'{f}' for f in files_to_remove])
+            print("Not copying the following files:")
+            print([f'{f}' for f in files_to_remove])
 
         copy_to_output_directory(files_to_keep, dir_name)
 
@@ -160,10 +162,12 @@ def ensure_date_set(dir_name: str, files: list[str]) -> None:
             if file_name.endswith('.gif'):
                 # Can't seem to set EXIF on gifs, so set creation time of file
                 subprocess.call(['SetFile', '-d', date_time.strftime("%m/%d/%Y %H:%M:%S"), image_path])
+                print(f'File {file_name} creation time set to {date_time.strftime("%Y-%m-%dT%H:%M:%S")}.')
             else:
                 # Update the date time field in the EXIF and save
                 image_exif[int(ExifTags.Base.DateTime)] = date_time.strftime("%Y:%m:%d %H:%M:%S")
                 image.save(image_path, exif=image_exif)
+                print(f'File {file_name} EXIF datetime set to {date_time.strftime("%Y-%m-%dT%H:%M:%S")}.')
 
 def copy_to_output_directory(files_names:list[str], source_directory:str) -> None:
     """Copies files to a subdirectory of the output directory.
@@ -182,6 +186,8 @@ def copy_to_output_directory(files_names:list[str], source_directory:str) -> Non
         source_file_path = os.path.join(source_directory, file_name)
         destination_file_path = os.path.join(destination_folder, file_name)
         subprocess.call(['cp', source_file_path, destination_file_path])
+
+    print(f'Copied {len(files_names)} files to {destination_folder}')
 
 
 if __name__ == "__main__":
