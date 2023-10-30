@@ -2,7 +2,6 @@ import os
 import re
 from collections import defaultdict
 from PIL import Image, ExifTags
-from dateutil import parser
 import json
 import datetime
 import subprocess
