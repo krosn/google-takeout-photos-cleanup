@@ -6,6 +6,9 @@ from dateutil import parser
 import json
 import datetime
 import subprocess
+import pathlib
+
+OUTPUT_FOLDER = '/Users/kevin/photos_migration'
 
 def clean_folder(path: str):
     # TODO: Loop folders
@@ -24,13 +27,14 @@ def clean_folder(path: str):
 
         ensure_date_set(dir_name, files_to_keep)
 
-        print("Script would keep:")
+        print("Keeping the following files:")
         print([f'{f}' for f in files_to_keep])
 
-        print("Script would remove:")
+        print("Not copying the following files:")
         print([f'{f}' for f in files_to_remove])
 
-        # TODO: Remove files to remove
+        copy_to_output_directory(files_to_keep, dir_name)
+
 
 def remove_json_files(files:list[str]) -> tuple[list[str], list[str]]:
     """Remove JSON files from the list.
@@ -109,6 +113,21 @@ def remove_unwanted_hyphenated_files(files:list[str]) -> tuple[list[str], list[s
     return (files_to_keep, files_removed)
 
 def ensure_date_set(dir_name: str, files: list[str]) -> None:
+    """Sets dates on the images specified based on the corresponding JSON file.
+
+    Non-image files are skipped.
+
+    For Gifs, the data cannot be set via EXIF, so the creation date of the file
+    is changed to the desired date time.
+    
+    The datetime is pulled from the utc timestamps in the Google Takeout JSON
+    file associated with the image. If there is no matching JSON file, an
+    interactive prompt will take a date time as an input.
+
+    Args:
+        dir_name (str): _description_
+        files (list[str]): _description_
+    """
     image_extensions = ('.jpg', '.jpeg', '.gif', '.bmp', '.tiff', '.raw')
     image_files = (file_name for file_name in files if file_name.endswith(image_extensions))
 
@@ -145,6 +164,24 @@ def ensure_date_set(dir_name: str, files: list[str]) -> None:
                 # Update the date time field in the EXIF and save
                 image_exif[int(ExifTags.Base.DateTime)] = date_time.strftime("%Y:%m:%d %H:%M:%S")
                 image.save(image_path, exif=image_exif)
+
+def copy_to_output_directory(files_names:list[str], source_directory:str) -> None:
+    """Copies files to a subdirectory of the output directory.
+
+    Args:
+        files_names (list[str]): The names of the files to copy.
+        source_directory (str): The full path of the parent directory.
+    """
+    dir_name_last_segment = pathlib.PurePath(source_directory).name
+    destination_folder = os.path.join(OUTPUT_FOLDER, dir_name_last_segment)
+
+    if not os.path.isdir(destination_folder):
+        os.makedirs(destination_folder)
+
+    for file_name in files_names:
+        source_file_path = os.path.join(source_directory, file_name)
+        destination_file_path = os.path.join(destination_folder, file_name)
+        subprocess.call(['cp', source_file_path, destination_file_path])
 
 
 if __name__ == "__main__":
