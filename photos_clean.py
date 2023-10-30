@@ -134,6 +134,7 @@ def ensure_date_set(dir_name: str, files: list[str]) -> None:
     """
     image_extensions = ('.jpg', '.jpeg', '.gif', '.bmp', '.tiff', '.raw')
     image_files = (file_name for file_name in files if file_name.endswith(image_extensions))
+    last_date_time = datetime.datetime.min
 
     for file_name in image_files:
         image_path = os.path.join(dir_name, file_name)
@@ -152,14 +153,15 @@ def ensure_date_set(dir_name: str, files: list[str]) -> None:
 
             if not json_file_exists:
                 print(f'Unable to find JSON file or key for f{file_name}.')
-                print(f'Please specify a value in "YYYY-MM-DD hh:mm:ss" format:')
-                date_time = parser.parse(input())
-
-            with open(json_file) as open_json_file:
-                json_data = json.load(open_json_file)
-            
-            creation_unix_timestamp = int(json_data['photoTakenTime']['timestamp'])
-            date_time = datetime.datetime.utcfromtimestamp(creation_unix_timestamp)
+                print(f'Defaulting to last date time {last_date_time}.')
+                date_time = last_date_time
+            else:
+                with open(json_file) as open_json_file:
+                    json_data = json.load(open_json_file)
+                
+                creation_unix_timestamp = int(json_data['photoTakenTime']['timestamp'])
+                date_time = datetime.datetime.utcfromtimestamp(creation_unix_timestamp)
+                last_date_time = date_time
             
             if file_name.endswith('.gif'):
                 # Can't seem to set EXIF on gifs, so set creation time of file
