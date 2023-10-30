@@ -1,5 +1,17 @@
 # google-takeout-photos-cleanup
-Cleans up the messy output from exporting photos via Google Takeout
+Cleans up the messy output from exporting photos via Google Takeout!
+
+Currently does the following actions:
+- Identifies all files to keep
+  - Skips JSON files, files with blacklisted hyphen segments (ex. "-edited", which seems to be a lower quality copy), and files with a file count number where there is a matching file without the number (ex. drop 20230817122243(1).jpeg if 0230817122243.jpeg exists)
+- Uses the JSON files to set the DateTime in the EXIF for images
+  - For .gif files, it sets the creationDate on the actual file
+  - If the JSON doesn't exist, it's probably a download, so it re-uses the last timestamp
+- Copies all files to keep to an output directory
+
+Remaining work
+- Support nested folders
+- Change the behavior to not modify the EXIF/dates on the original files, only the ones copied into the output
 
 # Development
 ## Using the virtual environment
