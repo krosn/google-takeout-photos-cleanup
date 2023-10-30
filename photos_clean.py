@@ -11,8 +11,10 @@ import pathlib
 OUTPUT_FOLDER = '/Users/kevin/photos_migration'
 DEBUG_MESSAGES = False
 
+# TODO: Change logic to copy all items then modifying and deleting the output
+#       so the original files are unchanged.
 def clean_folder(path: str):
-    # TODO: Loop folders
+    # TODO: Recurse nested folders
     for dir_name, sub_dir_names, file_names in os.walk(path):
         files_to_keep = set(file_names[:])
         files_to_remove = []
